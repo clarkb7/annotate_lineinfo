@@ -4,9 +4,13 @@ This IDAPython script will parse the PDB for the loaded executable and annotate 
 
 ## Usage
 
-Run as a regular IDAPython script
+Options
+* Run [annotate_lineinfo.py](annotate_lineinfo/annotate_lineinfo.py) as a regular IDAPython script.
 
-From another script or the IDAPython console
+* Place [annotate_lineinfo_plugin.py](annotate_lineinfo_plugin.py) in the `plugins` directory of your IDA installation.
+  * Use shortcut key `Alt-A` or run from plugins menu.
+
+* From another script or the IDAPython console:
 ```python
 import annotate_lineinfo
 annotate_lineinfo.ida_annotate_lineinfo()
