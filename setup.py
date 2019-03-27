@@ -28,5 +28,6 @@ setup(
     keywords='IDA IDAPython PDB',
 
     packages=['annotate_lineinfo'],
+    py_modules=['annotate_lineinfo_plugin'],
     install_requires=['comtypes', 'argparse'],
 )
