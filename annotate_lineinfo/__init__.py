@@ -1,4 +1,4 @@
-from .annotate_lineinfo import dia_iter_lineinfo
+from .annotate_lineinfo import DIASession
 
 try:
     import idaapi

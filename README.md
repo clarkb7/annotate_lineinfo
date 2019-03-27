@@ -9,7 +9,7 @@ Run as a regular IDAPython script
 From another script or the IDAPython console
 ```python
 import annotate_lineinfo
-ida_annotate_lineinfo(idaapi.get_input_file_path())
+annotate_lineinfo.ida_annotate_lineinfo()
 ```
 
 ## Caveats
