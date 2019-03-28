@@ -131,6 +131,19 @@ else:
         # Add the comment
         idaapi.add_long_cmt(ea, True, comment)
 
+    def ida_add_lineinfo_comment(line, func=None):
+        ea = idaapi.get_imagebase()+line.relativeVirtualAddress
+        cmt = "{}".format(compiland_name(line.compiland))
+        if func is not None:
+            cmt += ":{}".format(func.name)
+        cmt += ":{}".format(line.lineNumber)
+        ida_anterior_comment(ea, cmt)
+
+    def ida_add_lineinfo_comment_to_range(dia, ea, length):
+        rva = ea-idaapi.get_imagebase()
+        for line in dia.iter_lineinfo_by_rva(rva, length):
+            ida_add_lineinfo_comment(line)
+
     def ida_annotate_lineinfo(binary=None, msdia_ver=None,
         include_function_name=True):
         """Annotate IDA with source/line number information for @binary"""
@@ -138,12 +151,7 @@ else:
             binary = idaapi.get_input_file_path()
         ds = DIASession(binary,msdia_ver=msdia_ver)
         for func,line in ds.iter_function_lineinfo():
-            ea = idaapi.get_imagebase()+line.relativeVirtualAddress
-            cmt = "{}".format(compiland_name(line.compiland))
-            if include_function_name:
-                cmt += ":{}".format(func.name)
-            cmt += ":{}".format(line.lineNumber)
-            ida_anterior_comment(ea, cmt)
+            ida_add_lineinfo_comment(line, func=func if include_function_name else None)
 
     if __name__ == "__main__":
         ida_annotate_lineinfo()
