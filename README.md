@@ -24,5 +24,8 @@ Disassembly view popup menu
 * Right click inside a function, select annotate
 * Select a range of instructions, right click, select annotate
 
+Functions view popup menu
+* Select one or more functions, right click, select annotate
+
 ## Caveats
 Only runs on Windows. This script makes use of the COM API provided by msdia[ver].dll to parse the PDB.

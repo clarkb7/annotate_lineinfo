@@ -32,6 +32,16 @@ class ALI_DISASM_FunctionHandler(idaapi.action_handler_t):
         ida_func = ctx.cur_func
         ali.ida_add_lineinfo_comment_to_func(ali_plugin.dia, ida_func)
 
+class ALI_FUNCS_Handler(idaapi.action_handler_t):
+    """Action handler. Annotate function with line info"""
+    def activate(self, ctx):
+        for pfn_id in ctx.chooser_selection:
+            ida_func = idaapi.getn_func(pfn_id-1)
+            ali.ida_add_lineinfo_comment_to_func(ali_plugin.dia, ida_func)
+        return 1
+    def update(self, ctx):
+        return idaapi.AST_ENABLE_FOR_FORM
+
 class ALI_Hooks(idaapi.UI_Hooks):
     def finish_populating_tform_popup(self, form, popup):
 	tft = idaapi.get_tform_type(form)
@@ -50,6 +60,11 @@ class ALI_Hooks(idaapi.UI_Hooks):
             # Add corresponding action to popup menu
             if desc is not None:
 	        idaapi.attach_dynamic_action_to_popup(form, popup, desc, None)
+        elif tft == idaapi.BWN_FUNCS: # Functions view
+            # Add action to popup menu
+            idaapi.attach_action_to_popup(form, popup,
+                type(ali_plugin).action_wfuncs_name, None,
+                idaapi.SETMENU_INS)
 
 class ALI_plugin_t(idaapi.plugin_t):
     flags = idaapi.PLUGIN_PROC
@@ -58,12 +73,21 @@ class ALI_plugin_t(idaapi.plugin_t):
     wanted_name = PLUGIN_NAME
     wanted_hotkey = PLUGIN_WANTED_HOTKEY
 
+    action_wfuncs_name = 'ali:wfuncs'
+    action_wfuncs_label = "Annotate function(s) with line info"
     def init(self):
         idaapi.autoWait()
         idaapi.msg("[annotate_lineinfo] loaded!\n")
         self.dia = ali.DIASession(idaapi.get_input_file_path())
         self.hooks = ALI_Hooks()
         self.hooks.hook()
+        action_desc = idaapi.action_desc_t(
+            type(self).action_wfuncs_name, type(self).action_wfuncs_label,
+            ALI_FUNCS_Handler())
+        if not idaapi.register_action(action_desc):
+            idaapi.msg("[annotate_lineinfo] Failed to register action: {}").format(
+                type(self).action_wfuncs_name)
+            return idaapi.PLUGIN_SKIP
         return idaapi.PLUGIN_KEEP
 
     def run(self, arg):
@@ -71,6 +95,7 @@ class ALI_plugin_t(idaapi.plugin_t):
 
     def term(self):
         idaapi.msg("[annotate_lineinfo] unloading!\n")
+        idaapi.unregister_action(type(self).action_wfuncs_name)
 
 def PLUGIN_ENTRY():
     global ali_plugin
