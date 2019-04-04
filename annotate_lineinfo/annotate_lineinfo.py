@@ -144,6 +144,10 @@ else:
         for line in dia.iter_lineinfo_by_rva(rva, length):
             ida_add_lineinfo_comment(line)
 
+    def ida_add_lineinfo_comment_to_func(dia, ida_func):
+        length = ida_func.size()+1
+        ida_add_lineinfo_comment_to_range(dia, ida_func.startEA, length)
+
     def ida_annotate_lineinfo(binary=None, msdia_ver=None,
         include_function_name=True):
         """Annotate IDA with source/line number information for @binary"""

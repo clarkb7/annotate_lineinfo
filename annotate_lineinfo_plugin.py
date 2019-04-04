@@ -15,18 +15,22 @@ PLUGIN_WANTED_HOTKEY = 'Alt-A'
 ali_plugin = None
 
 class ALI_DISASM_SelectionHandler(idaapi.action_handler_t):
-    """Annotate selection with line info"""
+    """Dynamic action handler. Annotate selection with line info"""
     def activate(self, ctx):
-        selelection,start,end = idaapi.read_selection()
+        try:
+            # from is a reserved keyword in python...
+            cur_sel_from = getattr(ctx.cur_sel, "from")
+            start,end = (x.at.toea() for x in [cur_sel_from, ctx.cur_sel.to])
+        except AttributeError:
+            _,start,end = idaapi.read_selection()
         length = end-start
         ali.ida_add_lineinfo_comment_to_range(ali_plugin.dia, start, length)
 
 class ALI_DISASM_FunctionHandler(idaapi.action_handler_t):
-    """Annotate function with line info"""
+    """Dynamic action handler. Annotate function with line info"""
     def activate(self, ctx):
-        ida_func = idaapi.get_func(ScreenEA())
-        length = ida_func.size()+1
-        ali.ida_add_lineinfo_comment_to_range(ali_plugin.dia, ida_func.startEA, length)
+        ida_func = ctx.cur_func
+        ali.ida_add_lineinfo_comment_to_func(ali_plugin.dia, ida_func)
 
 class ALI_Hooks(idaapi.UI_Hooks):
     def finish_populating_tform_popup(self, form, popup):
