@@ -148,14 +148,17 @@ else:
         length = ida_func.size()+1
         ida_add_lineinfo_comment_to_range(dia, ida_func.startEA, length)
 
+    def ida_annotate_lineinfo_dia(dia, include_function_name=True):
+        for func,line in dia.iter_function_lineinfo():
+            ida_add_lineinfo_comment(line, func=func if include_function_name else None)
+
     def ida_annotate_lineinfo(binary=None, msdia_ver=None,
         include_function_name=True):
         """Annotate IDA with source/line number information for @binary"""
         if binary is None:
             binary = idaapi.get_input_file_path()
         ds = DIASession(binary,msdia_ver=msdia_ver)
-        for func,line in ds.iter_function_lineinfo():
-            ida_add_lineinfo_comment(line, func=func if include_function_name else None)
+        ida_annotate_lineinfo_dia(ds, include_function_name=include_function_name)
 
     if __name__ == "__main__":
         ida_annotate_lineinfo()

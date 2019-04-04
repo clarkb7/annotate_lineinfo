@@ -91,7 +91,7 @@ class ALI_plugin_t(idaapi.plugin_t):
         return idaapi.PLUGIN_KEEP
 
     def run(self, arg):
-        ali.ida_annotate_lineinfo()
+        ali.ida_annotate_lineinfo_dia(self.dia)
 
     def term(self):
         idaapi.msg("[annotate_lineinfo] unloading!\n")
