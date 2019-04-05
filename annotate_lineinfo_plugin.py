@@ -12,11 +12,14 @@ PLUGIN_HELP = "github.com/clarkb7/annotate_lineinfo"
 PLUGIN_NAME = "annotate_lineinfo"
 PLUGIN_WANTED_HOTKEY = 'Alt-A'
 
+def ALI_MSG(msg,EOL="\n"):
+    idaapi.msg("[{}] {}{}".format(PLUGIN_NAME, msg, EOL))
+
 ali_plugin = None
 try:
     idaapi.action_handler_t
 except AttributeError:
-    idaapi.msg("[annotate_lineinfo] IDA action API unavailable")
+    ALI_MSG("IDA action API unavailable")
     ALI_IDA_ACTION_API = False
 else:
     ALI_IDA_ACTION_API = True
@@ -87,28 +90,28 @@ class ALI_plugin_t(idaapi.plugin_t):
 
         idaapi.autoWait()
         if idaapi.get_input_file_path() is None:
-            idaapi.msg("[annotate_lineinfo] No file loaded")
+            ALI_MSG("No file loaded")
             return idaapi.PLUING_SKIP
-        idaapi.msg("[annotate_lineinfo] loaded!\n")
+        ALI_MSG("loaded!")
 
         try:
             self.dia = ali.DIASession(idaapi.get_input_file_path())
         except ValueError as e:
-            idaapi.msg("[annotate_lineinfo] Unable to load PDB: {}".format(e))
+            ALI_MSG("Unable to load PDB: {}".format(e))
             return idaapi.PLUGIN_SKIP
 
         if ALI_IDA_ACTION_API:
             # Setup/register UI_HOOKs
             self.hooks = ALI_Hooks()
             if not self.hooks.hook():
-                idaapi.msg("[annotate_lineinfo] Failed to install UI hooks")
+                ALI_MSG("Failed to install UI hooks")
                 return idaapi.PLUGINSKIP
             # Register actions
             action_desc = idaapi.action_desc_t(
                 type(self).action_wfuncs_name, type(self).action_wfuncs_label,
                 ALI_FUNCS_Handler())
             if not idaapi.register_action(action_desc):
-                idaapi.msg("[annotate_lineinfo] Failed to register action: {}".format(
+                ALI_MSG("Failed to register action: {}".format(
                     type(self).action_wfuncs_name))
                 return idaapi.PLUGIN_SKIP
 
@@ -118,7 +121,7 @@ class ALI_plugin_t(idaapi.plugin_t):
         ali.ida_annotate_lineinfo_dia(self.dia)
 
     def term(self):
-        idaapi.msg("[annotate_lineinfo] unloading!\n")
+        ALI_MSG("unloading!")
         if ALI_IDA_ACTION_API:
             if self.hooks is not None:
                 self.hooks.unhook()
