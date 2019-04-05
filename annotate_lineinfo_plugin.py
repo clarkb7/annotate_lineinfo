@@ -78,7 +78,11 @@ class ALI_plugin_t(idaapi.plugin_t):
     def init(self):
         idaapi.autoWait()
         idaapi.msg("[annotate_lineinfo] loaded!\n")
-        self.dia = ali.DIASession(idaapi.get_input_file_path())
+        try:
+            self.dia = ali.DIASession(idaapi.get_input_file_path())
+        except ValueError as e:
+            idaapi.msg("[annotate_lineinfo] Unable to load PDB: {}".format(e))
+            return idaapi.PLUGIN_SKIP
         self.hooks = ALI_Hooks()
         self.hooks.hook()
         action_desc = idaapi.action_desc_t(
