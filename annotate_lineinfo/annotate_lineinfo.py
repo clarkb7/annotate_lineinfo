@@ -62,8 +62,10 @@ class DIASession(object):
                 msg = "Unable to locate PDB"
             elif hr == 0x806D0012: # E_PDB_FORMAT
                 msg = "Invalid or obsolete file format"
+            elif hr == 0x806D0014: # E_PDB_NO_DEBUG_INFO
+                msg = "Invalid or obsolete file format"
             else:
-                msg = "Unknown exception loading PDB info: {}".format(e)
+                msg = "Unknown exception loading PDB info: {}".format(hex(hr))
             raise ValueError(msg)
         self.session = self.dataSource.openSession()
 
