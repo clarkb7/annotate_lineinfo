@@ -77,7 +77,11 @@ class ALI_plugin_t(idaapi.plugin_t):
     action_wfuncs_label = "Annotate function(s) with line info"
     def init(self):
         idaapi.autoWait()
+        if idaapi.get_input_file_path() is None:
+            idaapi.msg("[annotate_lineinfo] No file loaded")
+            return idaapi.PLUING_SKIP
         idaapi.msg("[annotate_lineinfo] loaded!\n")
+
         try:
             self.dia = ali.DIASession(idaapi.get_input_file_path())
         except ValueError as e:
