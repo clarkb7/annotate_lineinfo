@@ -28,7 +28,7 @@ def dia_enum_iter(enum):
 class DIASession(object):
     DEFAULT_MSDIA_VERSION="msdia140"
 
-    def __init__(self,binary,msdia_ver=None):
+    def __init__(self,binary,msdia_ver=None,sympaths=None):
         """Initialize MSDIA com API session"""
         logging.getLogger("comtypes").setLevel(logging.WARNING)
         from comtypes.client import GetModule, CreateObject
@@ -38,6 +38,8 @@ class DIASession(object):
 
         if msdia_ver is None:
             msdia_ver = type(self).DEFAULT_MSDIA_VERSION
+        if sympaths is None:
+            sympaths = []
 
         self.logger = logging.getLogger(type(self).__name__)
 
@@ -55,7 +57,7 @@ class DIASession(object):
             if ext == '.pdb':
                 self.dataSource.loadDataFromPdb(binary)
             else:
-                self.dataSource.loadDataForExe(binary,os.path.dirname(binary), None)
+                self.dataSource.loadDataForExe(binary,';'.join(sympaths), None)
         except _ctypes.COMError as e:
             hr = ctypes.c_uint(e[0]).value
             if hr == 0x806D0005: # E_PDB_NOT_FOUND
@@ -132,6 +134,19 @@ else:
             return
         # Add the comment
         idaapi.add_long_cmt(ea, True, comment)
+
+    def ida_get_sympath():
+        """Mimic IDA's pdb.cfg PDBSYM_DOWNLOAD_PATH default behavior to try
+        to use the same PDB as IDA.
+        """
+        ntsympath = os.getenv("_NT_SYMBOL_PATH")
+        if ntsympath is not None:
+            return ntsympath
+        idasympath = os.getenv("TEMP")
+        if idasympath is None:
+            return None
+        idasympath = 'srv*'+os.path.join(idasympath, "ida")
+        return idasympath
 
     def ida_add_lineinfo_comment(line, func=None):
         ea = idaapi.get_imagebase()+line.relativeVirtualAddress

@@ -89,13 +89,20 @@ class ALI_plugin_t(idaapi.plugin_t):
         self.hooks = None
 
         idaapi.autoWait()
-        if idaapi.get_input_file_path() is None:
+
+        inbin_path = idaapi.get_input_file_path()
+        if inbin_path is None:
             ALI_MSG("No file loaded")
             return idaapi.PLUING_SKIP
         ALI_MSG("loaded!")
 
+        sympaths = []
+        ida_sympath = ali.ida_get_sympath()
+        if ida_sympath is not None:
+            sympaths.append(ida_sympath)
+
         try:
-            self.dia = ali.DIASession(idaapi.get_input_file_path())
+            self.dia = ali.DIASession(inbin_path, sympaths=sympaths)
         except ValueError as e:
             ALI_MSG("Unable to load PDB: {}".format(e))
             return idaapi.PLUGIN_SKIP

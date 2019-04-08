@@ -27,5 +27,10 @@ Disassembly view popup menu
 Functions view popup menu
 * Select one or more functions, right click, select annotate
 
+Places searched for PDB file:
+* `_NT_SYMNOL_PATH` if set
+* IDA's default PDB download directory `%TEMP%\ida`
+* MSDIA defaults - Path in debug directory of executable, same path as executable
+
 ## Caveats
 Only runs on Windows. This script makes use of the COM API provided by msdia[ver].dll to parse the PDB.
