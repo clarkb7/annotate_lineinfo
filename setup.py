@@ -29,5 +29,5 @@ setup(
 
     packages=['annotate_lineinfo'],
     py_modules=['annotate_lineinfo_plugin'],
-    install_requires=['comtypes', 'argparse'],
+    install_requires=['comtypes'],
 )
