@@ -10,7 +10,7 @@ import annotate_lineinfo.annotate_lineinfo as ali
 PLUGIN_COMMENT = "Annotate IDA with source and line number information from a PDB"
 PLUGIN_HELP = "github.com/clarkb7/annotate_lineinfo"
 PLUGIN_NAME = "annotate_lineinfo"
-PLUGIN_WANTED_HOTKEY = 'Alt-A'
+PLUGIN_WANTED_HOTKEY = 'Alt-Shift-A'
 
 def ALI_MSG(msg,EOL="\n"):
     idaapi.msg("[{}] {}{}".format(PLUGIN_NAME, msg, EOL))
@@ -51,6 +51,14 @@ else:
         def update(self, ctx):
             return idaapi.AST_ENABLE_FOR_FORM
 
+    class ALI_MENU_AnnotateHandler(idaapi.action_handler_t):
+        """Menu action handler. Annotate entire file with line info"""
+        def activate(self, ctx):
+            ali.ida_annotate_lineinfo_dia(ali_plugin.dia)
+            return 1
+        def update(self, ctx):
+            return idaapi.AST_ENABLE_ALWAYS
+
     class ALI_Hooks(idaapi.UI_Hooks):
         def finish_populating_tform_popup(self, form, popup):
             tft = idaapi.get_tform_type(form)
@@ -76,14 +84,18 @@ else:
                     idaapi.SETMENU_INS)
 
 class ALI_plugin_t(idaapi.plugin_t):
-    flags = idaapi.PLUGIN_PROC
+    flags = idaapi.PLUGIN_PROC | idaapi.PLUGIN_HIDE
     comment = PLUGIN_COMMENT
     help = PLUGIN_HELP
     wanted_name = PLUGIN_NAME
-    wanted_hotkey = PLUGIN_WANTED_HOTKEY
+    wanted_hotkey = ''
 
+    menu_path = "Edit/Annotate lineinfo/"
     action_wfuncs_name = 'ali:wfuncs'
     action_wfuncs_label = "Annotate function(s) with line info"
+    action_menu_annotate_name = 'ali:menu_annotate'
+    action_menu_annotate_label = "Annotate entire input file"
+
     def init(self):
         self.dia = None
         self.hooks = None
@@ -114,18 +126,27 @@ class ALI_plugin_t(idaapi.plugin_t):
                 ALI_MSG("Failed to install UI hooks")
                 return idaapi.PLUGINSKIP
             # Register actions
-            action_desc = idaapi.action_desc_t(
-                type(self).action_wfuncs_name, type(self).action_wfuncs_label,
-                ALI_FUNCS_Handler())
-            if not idaapi.register_action(action_desc):
-                ALI_MSG("Failed to register action: {}".format(
-                    type(self).action_wfuncs_name))
-                return idaapi.PLUGIN_SKIP
-
+            actions = [
+                idaapi.action_desc_t(
+                    type(self).action_wfuncs_name, type(self).action_wfuncs_label,
+                    ALI_FUNCS_Handler()),
+                idaapi.action_desc_t(
+                    type(self).action_menu_annotate_name, type(self).action_menu_annotate_label,
+                    ALI_MENU_AnnotateHandler(), PLUGIN_WANTED_HOTKEY)
+            ]
+            for action in actions:
+                if not idaapi.register_action(action):
+                    ALI_MSG("Failed to register action: {}".format(action.name))
+                    return idaapi.PLUGIN_SKIP
+            # Attach menu actions
+            idaapi.attach_action_to_menu(
+                type(self).menu_path,
+                type(self).action_menu_annotate_name,
+                idaapi.SETMENU_APP)
         return idaapi.PLUGIN_KEEP
 
     def run(self, arg):
-        ali.ida_annotate_lineinfo_dia(self.dia)
+        pass
 
     def term(self):
         ALI_MSG("unloading!")
@@ -133,6 +154,7 @@ class ALI_plugin_t(idaapi.plugin_t):
             if self.hooks is not None:
                 self.hooks.unhook()
             idaapi.unregister_action(type(self).action_wfuncs_name)
+            idaapi.unregister_action(type(self).action_menu_annotate_name)
 
 def PLUGIN_ENTRY():
     global ali_plugin

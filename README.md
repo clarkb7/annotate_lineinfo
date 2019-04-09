@@ -18,7 +18,7 @@ To install
 * Place [annotate_lineinfo_plugin.py](annotate_lineinfo_plugin.py) in the `plugins` directory of your IDA installation.
 
 Annotate entire file
-* Use shortcut key `Alt-A` or run from plugins menu.
+* Use shortcut key `Alt-Shift-A` or run from "Edit->Annotate lineinfo" menu.
 
 Disassembly view popup menu
 * Right click inside a function, select annotate
