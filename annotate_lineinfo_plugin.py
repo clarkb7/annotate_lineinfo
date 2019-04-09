@@ -59,6 +59,24 @@ else:
         def update(self, ctx):
             return idaapi.AST_ENABLE_ALWAYS
 
+    class ALI_MENU_ChoosePDBHandler(idaapi.action_handler_t):
+        """Menu action handler. Choose PDB file to load info from"""
+        def activate(self, ctx):
+            args = [False, "*.pdb", "Enter path to PDB file"]
+            try:
+                pdbpath = idaapi.ask_file(*args)
+            except AttributeError:
+                pdbpath = idc.AskFile(*args)
+            if pdbpath is None:
+                return 0
+            if not ali_plugin.init_dia(inbin_path=pdbpath):
+                return 0
+            if not ali_plugin.attach_actions():
+                return 0
+            return 1
+        def update(self, ctx):
+            return idaapi.AST_ENABLE_ALWAYS
+
     class ALI_Hooks(idaapi.UI_Hooks):
         def finish_populating_tform_popup(self, form, popup):
             tft = idaapi.get_tform_type(form)
@@ -95,6 +113,8 @@ class ALI_plugin_t(idaapi.plugin_t):
     action_wfuncs_label = "Annotate function(s) with line info"
     action_menu_annotate_name = 'ali:menu_annotate'
     action_menu_annotate_label = "Annotate entire input file"
+    action_menu_loadpdb_name = 'ali:menu_loadpdb'
+    action_menu_loadpdb_label = "Choose PDB file..."
 
     def init(self):
         self.dia = None
@@ -102,29 +122,11 @@ class ALI_plugin_t(idaapi.plugin_t):
 
         idaapi.autoWait()
 
-        inbin_path = idaapi.get_input_file_path()
-        if inbin_path is None:
-            ALI_MSG("No file loaded")
-            return idaapi.PLUING_SKIP
-        ALI_MSG("loaded!")
-
-        sympaths = []
-        ida_sympath = ali.ida_get_sympath()
-        if ida_sympath is not None:
-            sympaths.append(ida_sympath)
-
-        try:
-            self.dia = ali.DIASession(inbin_path, sympaths=sympaths)
-        except ValueError as e:
-            ALI_MSG("Unable to load PDB: {}".format(e))
-            return idaapi.PLUGIN_SKIP
+        if not self.init_dia():
+            ALI_MSG("Please specify PDB file path using '{}{}'".format(
+                    type(self).menu_path,type(self).action_menu_loadpdb_label))
 
         if ALI_IDA_ACTION_API:
-            # Setup/register UI_HOOKs
-            self.hooks = ALI_Hooks()
-            if not self.hooks.hook():
-                ALI_MSG("Failed to install UI hooks")
-                return idaapi.PLUGINSKIP
             # Register actions
             actions = [
                 idaapi.action_desc_t(
@@ -132,17 +134,21 @@ class ALI_plugin_t(idaapi.plugin_t):
                     ALI_FUNCS_Handler()),
                 idaapi.action_desc_t(
                     type(self).action_menu_annotate_name, type(self).action_menu_annotate_label,
-                    ALI_MENU_AnnotateHandler(), PLUGIN_WANTED_HOTKEY)
+                    ALI_MENU_AnnotateHandler(), PLUGIN_WANTED_HOTKEY),
+                idaapi.action_desc_t(
+                    type(self).action_menu_loadpdb_name, type(self).action_menu_loadpdb_label,
+                    ALI_MENU_ChoosePDBHandler()),
             ]
             for action in actions:
                 if not idaapi.register_action(action):
                     ALI_MSG("Failed to register action: {}".format(action.name))
                     return idaapi.PLUGIN_SKIP
-            # Attach menu actions
-            idaapi.attach_action_to_menu(
-                type(self).menu_path,
-                type(self).action_menu_annotate_name,
-                idaapi.SETMENU_APP)
+
+            # Attach actions
+            if not self.attach_actions():
+                return idaapi.PLUGIN_SKIP
+
+        ALI_MSG("loaded!")
         return idaapi.PLUGIN_KEEP
 
     def run(self, arg):
@@ -155,6 +161,56 @@ class ALI_plugin_t(idaapi.plugin_t):
                 self.hooks.unhook()
             idaapi.unregister_action(type(self).action_wfuncs_name)
             idaapi.unregister_action(type(self).action_menu_annotate_name)
+            idaapi.unregister_action(type(self).action_menu_loadpdb_name)
+
+    def init_dia(self, inbin_path=None, sympaths=None):
+        if inbin_path is None:
+            inbin_path = idaapi.get_input_file_path()
+            if inbin_path is None:
+                ALI_MSG("No file loaded")
+                return False
+
+        if sympaths is None:
+            sympaths = []
+            ida_sympath = ali.ida_get_sympath()
+            if ida_sympath is not None:
+                sympaths.append(ida_sympath)
+
+        try:
+            self.dia = ali.DIASession(inbin_path, sympaths=sympaths)
+        except ValueError as e:
+            ALI_MSG("Error loading PDB: {}".format(e))
+            return False
+        ALI_MSG("Loaded PDB info!")
+        return True
+
+    def attach_actions(self):
+        if ALI_IDA_ACTION_API:
+            # Menu actions
+            menu_actions = [
+                type(self).action_menu_loadpdb_name,
+            ]
+            if self.ready():
+                menu_actions += [
+                    type(self).action_menu_annotate_name,
+                ]
+            for name in menu_actions:
+                if not idaapi.attach_action_to_menu(
+                    type(self).menu_path,
+                    name, idaapi.SETMENU_APP):
+                    ALI_MSG("Failed to attach action: {}".format(name))
+                    return False
+
+            # UI Hooks
+            if self.ready() and self.hooks is None:
+                self.hooks = ALI_Hooks()
+                if not self.hooks.hook():
+                    ALI_MSG("Failed to install UI hooks")
+                    return False
+        return True
+
+    def ready(self):
+        return self.dia is not None
 
 def PLUGIN_ENTRY():
     global ali_plugin
