@@ -77,6 +77,17 @@ else:
         def update(self, ctx):
             return idaapi.AST_ENABLE_ALWAYS
 
+    class ALI_MENU_RetryPDBHandler(idaapi.action_handler_t):
+        """Menu action handler. Retry auto-find PDB file"""
+        def activate(self, ctx):
+            if not ali_plugin.init_dia():
+                return 0
+            if not ali_plugin.attach_actions():
+                return 0
+            return 1
+        def update(self, ctx):
+            return idaapi.AST_ENABLE_ALWAYS
+
     class ALI_Hooks(idaapi.UI_Hooks):
         def finish_populating_tform_popup(self, form, popup):
             tft = idaapi.get_tform_type(form)
@@ -115,6 +126,8 @@ class ALI_plugin_t(idaapi.plugin_t):
     action_menu_annotate_label = "Annotate entire input file"
     action_menu_loadpdb_name = 'ali:menu_loadpdb'
     action_menu_loadpdb_label = "Choose PDB file..."
+    action_menu_retrypdb_name = 'ali:menu_retrypdb'
+    action_menu_retrypdb_label = "Retry auto-find PDB"
 
     def init(self):
         self.dia = None
@@ -138,6 +151,9 @@ class ALI_plugin_t(idaapi.plugin_t):
                 idaapi.action_desc_t(
                     type(self).action_menu_loadpdb_name, type(self).action_menu_loadpdb_label,
                     ALI_MENU_ChoosePDBHandler()),
+                idaapi.action_desc_t(
+                    type(self).action_menu_retrypdb_name, type(self).action_menu_retrypdb_label,
+                    ALI_MENU_RetryPDBHandler()),
             ]
             for action in actions:
                 if not idaapi.register_action(action):
@@ -162,6 +178,7 @@ class ALI_plugin_t(idaapi.plugin_t):
             idaapi.unregister_action(type(self).action_wfuncs_name)
             idaapi.unregister_action(type(self).action_menu_annotate_name)
             idaapi.unregister_action(type(self).action_menu_loadpdb_name)
+            idaapi.unregister_action(type(self).action_menu_retrypdb_name)
 
     def init_dia(self, inbin_path=None, sympaths=None):
         if inbin_path is None:
@@ -189,6 +206,7 @@ class ALI_plugin_t(idaapi.plugin_t):
             # Menu actions
             menu_actions = [
                 type(self).action_menu_loadpdb_name,
+                type(self).action_menu_retrypdb_name,
             ]
             if self.ready():
                 menu_actions += [
