@@ -2,10 +2,14 @@
 
 This IDAPython script/plugin will parse the PDB for the loaded executable and annotate the disassembly with source and line number information.
 
+<p align="center">
+<img alt="WinDbg TTD tutorial sample screenshot" src="https://raw.github.com/clarkb7/annotate_lineinfo/master/screenshots/main.png?sanitize=true"/>
+</p>
+
 ## Usage
 
 ### Script
-* Option 1) Run [annotate_lineinfo.py](annotate_lineinfo/annotate_lineinfo.py) as a regular IDAPython script.
+* Option 1) Run [annotate_lineinfo.py](https://github.com/clarkb7/annotate_lineinfo/blob/master/annotate_lineinfo/annotate_lineinfo.py) as a regular IDAPython script.
 
 * Option 2) From another script or the IDAPython console:
 ```python
@@ -15,10 +19,10 @@ annotate_lineinfo.ida_annotate_lineinfo()
 
 ### Plugin
 To install
-* Option 1) Run `python setup.py install --install-ida-plugin=PATH` to install [annotate_lineinfo_plugin.py](annotate_lineinfo_plugin.py) to `PATH\plugins`
+* Option 1) Run `python setup.py install --install-ida-plugin=PATH` to install [annotate_lineinfo_plugin.py](https://github.com/clarkb7/annotate_lineinfo/blob/master/annotate_lineinfo_plugin.py) to `PATH\plugins`
   * If `PATH` is not specified, `%IDAUSR%` will be tried first
   * If `%IDAUSR%` does not exist, it defaults to `%APPDATA%\Hex-Rays\IDA Pro`
-* Option 2) Manually place [annotate_lineinfo_plugin.py](annotate_lineinfo_plugin.py) in the `plugins` directory of your IDA installation.
+* Option 2) Manually place [annotate_lineinfo_plugin.py](https://github.com/clarkb7/annotate_lineinfo/blob/master/annotate_lineinfo_plugin.py) in the `plugins` directory of your IDA installation.
 
 Annotate entire file
 * Use shortcut key `Alt-Shift-A` or run from `Edit->Annotate lineinfo` menu.
