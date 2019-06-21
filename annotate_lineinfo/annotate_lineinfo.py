@@ -128,10 +128,17 @@ else:
 
     def ida_anterior_comment(ea, comment):
         """Add anterior comment @comment at @ea"""
+        line_prefix = "ALI) "
+        comment = line_prefix+comment
         # Ensure we don't duplcate the comment
-        cur_cmt = idaapi.get_extra_cmt(ea, idaapi.E_PREV)
-        if cur_cmt is not None and comment in cur_cmt:
-            return
+        i = idaapi.E_PREV
+        end = idaapi.get_first_free_extra_cmtidx(ea, i)
+        while i < end:
+            cur_cmt = idaapi.get_extra_cmt(ea, i)
+            if cur_cmt is not None and cur_cmt[2:].startswith(line_prefix):
+                idaapi.update_extra_cmt(ea, i, cur_cmt[:2]+comment)
+                return
+            i += 1
         # Add the comment
         idaapi.add_long_cmt(ea, True, comment)
 
