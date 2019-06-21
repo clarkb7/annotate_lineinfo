@@ -15,6 +15,9 @@ PLUGIN_WANTED_HOTKEY = 'Alt-Shift-A'
 def ALI_MSG(msg,EOL="\n"):
     idaapi.msg("[{}] {}{}".format(PLUGIN_NAME, msg, EOL))
 
+ACTION_ADD_ANNOTATION = 0
+ACTION_DEL_ANNOTATION = 1
+
 ali_plugin = None
 try:
     idaapi.action_handler_t
@@ -25,6 +28,10 @@ else:
     ALI_IDA_ACTION_API = True
     class ALI_DISASM_SelectionHandler(idaapi.action_handler_t):
         """Dynamic action handler. Annotate selection with line info"""
+        def __init__(self, action):
+            idaapi.action_handler_t.__init__(self)
+            self._action = action
+
         def activate(self, ctx):
             try:
                 # from is a reserved keyword in python...
@@ -33,28 +40,49 @@ else:
             except AttributeError:
                 _,start,end = idaapi.read_selection()
             length = end-start
-            ali.ida_add_lineinfo_comment_to_range(ali_plugin.dia, start, length)
+            if self._action == ACTION_ADD_ANNOTATION:
+                ali.ida_add_lineinfo_comment_to_range(ali_plugin.dia, start, length)
+            elif self._action == ACTION_DEL_ANNOTATION:
+                ali.ida_del_lineinfo_comment_from_range(start, length)
 
     class ALI_DISASM_FunctionHandler(idaapi.action_handler_t):
         """Dynamic action handler. Annotate function with line info"""
+        def __init__(self, action):
+            idaapi.action_handler_t.__init__(self)
+            self._action = action
         def activate(self, ctx):
             ida_func = ctx.cur_func
-            ali.ida_add_lineinfo_comment_to_func(ali_plugin.dia, ida_func)
+            if self._action == ACTION_ADD_ANNOTATION:
+                ali.ida_add_lineinfo_comment_to_func(ali_plugin.dia, ida_func)
+            elif self._action == ACTION_DEL_ANNOTATION:
+                ali.ida_del_lineinfo_comment_from_func(ida_func)
 
     class ALI_FUNCS_Handler(idaapi.action_handler_t):
         """Action handler. Annotate function with line info"""
+        def __init__(self, action):
+            idaapi.action_handler_t.__init__(self)
+            self._action = action
         def activate(self, ctx):
             for pfn_id in ctx.chooser_selection:
                 ida_func = idaapi.getn_func(pfn_id-1)
-                ali.ida_add_lineinfo_comment_to_func(ali_plugin.dia, ida_func)
+                if self._action == ACTION_ADD_ANNOTATION:
+                    ali.ida_add_lineinfo_comment_to_func(ali_plugin.dia, ida_func)
+                elif self._action == ACTION_DEL_ANNOTATION:
+                    ali.ida_del_lineinfo_comment_from_func(ida_func)
             return 1
         def update(self, ctx):
             return idaapi.AST_ENABLE_FOR_FORM
 
     class ALI_MENU_AnnotateHandler(idaapi.action_handler_t):
         """Menu action handler. Annotate entire file with line info"""
+        def __init__(self, action):
+            idaapi.action_handler_t.__init__(self)
+            self._action = action
         def activate(self, ctx):
-            ali.ida_annotate_lineinfo_dia(ali_plugin.dia)
+            if self._action == ACTION_ADD_ANNOTATION:
+                ali.ida_annotate_lineinfo_dia(ali_plugin.dia)
+            elif self._action == ACTION_DEL_ANNOTATION:
+                ali.ida_del_annotations()
             return 1
         def update(self, ctx):
             return idaapi.AST_ENABLE_ALWAYS
@@ -92,24 +120,35 @@ else:
         def finish_populating_tform_popup(self, form, popup):
             tft = idaapi.get_tform_type(form)
             if tft == idaapi.BWN_DISASM: # Disassembly view
-                desc = None
+                descs = []
                 # Choose either selection or function annotation depending on cursor
                 selection = idaapi.read_selection()
                 if selection[0] == True:
-                    desc = idaapi.action_desc_t(None,
-                        'Annotate selection with line info', ALI_DISASM_SelectionHandler())
+                    descs.append(idaapi.action_desc_t(None,
+                        'Annotate selection with line info',
+                        ALI_DISASM_SelectionHandler(ACTION_ADD_ANNOTATION)))
+                    descs.append(idaapi.action_desc_t(None,
+                        'Remove annotations from selection',
+                        ALI_DISASM_SelectionHandler(ACTION_DEL_ANNOTATION)))
                 else:
                     func = idaapi.get_func(ScreenEA())
                     if func is not None:
-                        desc = idaapi.action_desc_t(None,
-                            'Annotate function with line info', ALI_DISASM_FunctionHandler())
+                        descs.append(idaapi.action_desc_t(None,
+                            'Annotate function with line info',
+                            ALI_DISASM_FunctionHandler(ACTION_ADD_ANNOTATION)))
+                        descs.append(idaapi.action_desc_t(None,
+                            'Remove annotations from function',
+                            ALI_DISASM_FunctionHandler(ACTION_DEL_ANNOTATION)))
                 # Add corresponding action to popup menu
-                if desc is not None:
-                    idaapi.attach_dynamic_action_to_popup(form, popup, desc, None)
+                for d in descs:
+                    idaapi.attach_dynamic_action_to_popup(form, popup, d, None)
             elif tft == idaapi.BWN_FUNCS: # Functions view
                 # Add action to popup menu
                 idaapi.attach_action_to_popup(form, popup,
-                    type(ali_plugin).action_wfuncs_name, None,
+                    type(ali_plugin).action_wfuncs_add_name, None,
+                    idaapi.SETMENU_INS)
+                idaapi.attach_action_to_popup(form, popup,
+                    type(ali_plugin).action_wfuncs_del_name, None,
                     idaapi.SETMENU_INS)
 
 class ALI_plugin_t(idaapi.plugin_t):
@@ -120,10 +159,14 @@ class ALI_plugin_t(idaapi.plugin_t):
     wanted_hotkey = ''
 
     menu_path = "Edit/Annotate lineinfo/"
-    action_wfuncs_name = 'ali:wfuncs'
-    action_wfuncs_label = "Annotate function(s) with line info"
+    action_wfuncs_add_name = 'ali:wfuncs_add'
+    action_wfuncs_add_label = "Annotate function(s) with line info"
+    action_wfuncs_del_name = 'ali:wfuncs_del'
+    action_wfuncs_del_label = "Remove annotations from function(s)"
     action_menu_annotate_name = 'ali:menu_annotate'
     action_menu_annotate_label = "Annotate entire input file"
+    action_menu_delannotate_name = 'ali:menu_delannotate'
+    action_menu_delannotate_label = "Remove all annotations"
     action_menu_loadpdb_name = 'ali:menu_loadpdb'
     action_menu_loadpdb_label = "Choose PDB file..."
     action_menu_retrypdb_name = 'ali:menu_retrypdb'
@@ -143,11 +186,17 @@ class ALI_plugin_t(idaapi.plugin_t):
             # Register actions
             actions = [
                 idaapi.action_desc_t(
-                    type(self).action_wfuncs_name, type(self).action_wfuncs_label,
-                    ALI_FUNCS_Handler()),
+                    type(self).action_wfuncs_add_name, type(self).action_wfuncs_add_label,
+                    ALI_FUNCS_Handler(ACTION_ADD_ANNOTATION)),
+                idaapi.action_desc_t(
+                    type(self).action_wfuncs_del_name, type(self).action_wfuncs_del_label,
+                    ALI_FUNCS_Handler(ACTION_DEL_ANNOTATION)),
                 idaapi.action_desc_t(
                     type(self).action_menu_annotate_name, type(self).action_menu_annotate_label,
-                    ALI_MENU_AnnotateHandler(), PLUGIN_WANTED_HOTKEY),
+                    ALI_MENU_AnnotateHandler(ACTION_ADD_ANNOTATION), PLUGIN_WANTED_HOTKEY),
+                idaapi.action_desc_t(
+                    type(self).action_menu_delannotate_name, type(self).action_menu_delannotate_label,
+                    ALI_MENU_AnnotateHandler(ACTION_DEL_ANNOTATION)),
                 idaapi.action_desc_t(
                     type(self).action_menu_loadpdb_name, type(self).action_menu_loadpdb_label,
                     ALI_MENU_ChoosePDBHandler()),
@@ -175,7 +224,8 @@ class ALI_plugin_t(idaapi.plugin_t):
         if ALI_IDA_ACTION_API:
             if self.hooks is not None:
                 self.hooks.unhook()
-            idaapi.unregister_action(type(self).action_wfuncs_name)
+            idaapi.unregister_action(type(self).action_wfuncs_add_name)
+            idaapi.unregister_action(type(self).action_wfuncs_del_name)
             idaapi.unregister_action(type(self).action_menu_annotate_name)
             idaapi.unregister_action(type(self).action_menu_loadpdb_name)
             idaapi.unregister_action(type(self).action_menu_retrypdb_name)
@@ -211,6 +261,7 @@ class ALI_plugin_t(idaapi.plugin_t):
             if self.ready():
                 menu_actions += [
                     type(self).action_menu_annotate_name,
+                    type(self).action_menu_delannotate_name,
                 ]
             for name in menu_actions:
                 if not idaapi.attach_action_to_menu(

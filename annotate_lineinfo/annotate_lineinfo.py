@@ -12,6 +12,8 @@ import argparse
 import logging
 logger = logging.getLogger(__name__)
 
+ALI_LINE_PREFIX = "ALI) "
+
 ##================ HELPER UTILITIES ================##
 def compiland_name(compiland):
     """"""
@@ -119,6 +121,7 @@ def main(argv):
 
 try:
     import idaapi
+    import idautils
 except ImportError:
     # No IDA here
     if __name__ == "__main__":
@@ -126,21 +129,32 @@ except ImportError:
 else:
     ##================ Run from within IDA ================##
 
-    def ida_anterior_comment(ea, comment):
-        """Add anterior comment @comment at @ea"""
-        line_prefix = "ALI) "
-        comment = line_prefix+comment
-        # Ensure we don't duplcate the comment
+    def iter_anterior_comment(ea):
         i = idaapi.E_PREV
         end = idaapi.get_first_free_extra_cmtidx(ea, i)
         while i < end:
+            yield i
+            i += 1
+
+    def ida_anterior_comment(ea, comment):
+        """Add anterior comment @comment at @ea"""
+        comment = ALI_LINE_PREFIX+comment
+        # Ensure we don't duplcate the comment
+        for i in iter_anterior_comment(ea):
             cur_cmt = idaapi.get_extra_cmt(ea, i)
-            if cur_cmt is not None and cur_cmt[2:].startswith(line_prefix):
+            if cur_cmt is not None and cur_cmt[2:].startswith(ALI_LINE_PREFIX):
                 idaapi.update_extra_cmt(ea, i, cur_cmt[:2]+comment)
                 return
             i += 1
         # Add the comment
         idaapi.add_long_cmt(ea, True, comment)
+
+    def ida_del_anterior_comment(ea):
+        """Remove anterior comment from @ea"""
+        for i in iter_anterior_comment(ea):
+            cmt = idaapi.get_extra_cmt(ea, i)
+            if cmt is not None and cmt[2:].startswith(ALI_LINE_PREFIX):
+                idaapi.del_extra_cmt(ea, i)
 
     def ida_get_sympath():
         """Mimic IDA's pdb.cfg PDBSYM_DOWNLOAD_PATH default behavior to try
@@ -168,13 +182,25 @@ else:
         for line in dia.iter_lineinfo_by_rva(rva, length):
             ida_add_lineinfo_comment(line)
 
+    def ida_del_lineinfo_comment_from_range(ea, length):
+        for h in idautils.Heads(ea, ea+length):
+            ida_del_anterior_comment(h)
+
     def ida_add_lineinfo_comment_to_func(dia, ida_func):
         length = ida_func.size()+1
         ida_add_lineinfo_comment_to_range(dia, ida_func.startEA, length)
 
+    def ida_del_lineinfo_comment_from_func(ida_func):
+        length = ida_func.size()+1
+        ida_del_lineinfo_comment_from_range(ida_func.startEA, length)
+
     def ida_annotate_lineinfo_dia(dia, include_function_name=True):
         for func,line in dia.iter_function_lineinfo():
             ida_add_lineinfo_comment(line, func=func if include_function_name else None)
+
+    def ida_del_annotations():
+        for h in idautils.Heads():
+            ida_del_anterior_comment(h)
 
     def ida_annotate_lineinfo(binary=None, msdia_ver=None,
         include_function_name=True):
