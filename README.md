@@ -1,4 +1,5 @@
 # annotate_lineinfo
+[![PyPI version](https://badge.fury.io/py/annotate-lineinfo.svg)](https://badge.fury.io/py/annotate-lineinfo)
 
 This IDAPython script/plugin will parse the PDB for the loaded executable and annotate the disassembly with source and line number information.
 
