@@ -4,7 +4,7 @@
 This IDAPython script/plugin will parse the PDB for the loaded executable and annotate the disassembly with source and line number information.
 
 <p align="center">
-<img alt="WinDbg TTD tutorial sample screenshot" src="https://raw.github.com/clarkb7/annotate_lineinfo/master/screenshots/main.png?sanitize=true"/>
+<img alt="WinDbg TTD tutorial sample screenshot" src="https://raw.github.com/clarkb7/annotate_lineinfo/master/screenshots/main.png?raw=true"/>
 </p>
 
 ## Usage
