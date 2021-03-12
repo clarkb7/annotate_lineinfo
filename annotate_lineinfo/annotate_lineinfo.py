@@ -23,7 +23,7 @@ def compiland_name(compiland):
 
 def dia_enum_iter(enum):
     """Turn an IDiaEnum* object into a python generator"""
-    for i in xrange(enum.count):
+    for i in range(enum.count):
         yield enum.Next(1)[0]
 
 ##================ DIA ================##
@@ -147,7 +147,7 @@ else:
                 return
             i += 1
         # Add the comment
-        idaapi.add_long_cmt(ea, True, comment)
+        idaapi.add_extra_cmt(ea, True, comment)
 
     def ida_del_anterior_comment(ea):
         """Remove anterior comment from @ea"""
@@ -188,11 +188,11 @@ else:
 
     def ida_add_lineinfo_comment_to_func(dia, ida_func):
         length = ida_func.size()+1
-        ida_add_lineinfo_comment_to_range(dia, ida_func.startEA, length)
+        ida_add_lineinfo_comment_to_range(dia, ida_func.start_ea, length)
 
     def ida_del_lineinfo_comment_from_func(ida_func):
         length = ida_func.size()+1
-        ida_del_lineinfo_comment_from_range(ida_func.startEA, length)
+        ida_del_lineinfo_comment_from_range(ida_func.start_ea, length)
 
     def ida_annotate_lineinfo_dia(dia, include_function_name=True):
         for func,line in dia.iter_function_lineinfo():

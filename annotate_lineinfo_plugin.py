@@ -5,6 +5,7 @@ Copyright (c) 2019 Branden Clark [github.com/clarkb7]
 MIT License, see LICENSE for details.
 """
 import idaapi
+import idc
 import annotate_lineinfo.annotate_lineinfo as ali
 
 PLUGIN_COMMENT = "Annotate IDA with source and line number information from a PDB"
@@ -38,7 +39,7 @@ else:
                 cur_sel_from = getattr(ctx.cur_sel, "from")
                 start,end = (x.at.toea() for x in [cur_sel_from, ctx.cur_sel.to])
             except AttributeError:
-                _,start,end = idaapi.read_selection()
+                _,start,end = idaapi.read_range_selection(None)
             length = end-start
             if self._action == ACTION_ADD_ANNOTATION:
                 ali.ida_add_lineinfo_comment_to_range(ali_plugin.dia, start, length)
@@ -71,7 +72,7 @@ else:
                     ali.ida_del_lineinfo_comment_from_func(ida_func)
             return 1
         def update(self, ctx):
-            return idaapi.AST_ENABLE_FOR_FORM
+            return idaapi.AST_ENABLE_FOR_WIDGET
 
     class ALI_MENU_AnnotateHandler(idaapi.action_handler_t):
         """Menu action handler. Annotate entire file with line info"""
@@ -117,12 +118,12 @@ else:
             return idaapi.AST_ENABLE_ALWAYS
 
     class ALI_Hooks(idaapi.UI_Hooks):
-        def finish_populating_tform_popup(self, form, popup):
-            tft = idaapi.get_tform_type(form)
+        def finish_populating_widget_popup(self, form, popup):
+            tft = idaapi.get_widget_type(form)
             if tft == idaapi.BWN_DISASM: # Disassembly view
                 descs = []
                 # Choose either selection or function annotation depending on cursor
-                selection = idaapi.read_selection()
+                selection = idaapi.read_range_selection(None)
                 if selection[0] == True:
                     descs.append(idaapi.action_desc_t(None,
                         'Annotate selection with line info',
@@ -131,7 +132,7 @@ else:
                         'Remove annotations from selection',
                         ALI_DISASM_SelectionHandler(ACTION_DEL_ANNOTATION)))
                 else:
-                    func = idaapi.get_func(ScreenEA())
+                    func = idaapi.get_func(idc.get_screen_ea())
                     if func is not None:
                         descs.append(idaapi.action_desc_t(None,
                             'Annotate function with line info',
@@ -176,7 +177,7 @@ class ALI_plugin_t(idaapi.plugin_t):
         self.dia = None
         self.hooks = None
 
-        idaapi.autoWait()
+        idaapi.auto_wait()
 
         if not self.init_dia():
             ALI_MSG("Please specify PDB file path using '{}{}'".format(
